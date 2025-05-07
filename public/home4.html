@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Despesas do Relatório</title>
+</head>
+<body style="font-family: 'Segoe UI', sans-serif; padding: 20px; background-color: #f4f6fa; display: flex; gap: 40px;">
+
+  <div style="flex: 1;">
+    <h2>Nova Despesa</h2>
+    <p id="relatorioInfo"></p>
+    <input id="tipo" placeholder="Tipo (ex: Transporte)" />
+    <input id="valor" type="number" placeholder="Valor" />
+    <input id="data" type="date" />
+    <input id="formaPagamento" placeholder="Forma de pagamento" />
+    <input id="local" placeholder="Local" />
+    <input id="comprovante" type="file" />
+    <br/><br/>
+    <button onclick="adicionarDespesa()">Adicionar Despesa</button>
+  </div>
+
+  <div style="flex: 1;">
+    <h2>Despesas Vinculadas</h2>
+    <ul id="listaDespesas" style="list-style: none; padding-left: 0;"></ul>
+    <p><strong>Total:</strong> R$ <span id="totalDespesas">0.00</span></p>
+    <button onclick="window.location.href='home3.html'">Voltar</button>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+    import { getFirestore, doc, getDoc, collection, addDoc, getDocs, query, where } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+    import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js";
+
+    const firebaseConfig = {
+      apiKey: "SUA_API_KEY",
+      authDomain: "seu-projeto.firebaseapp.com",
+      projectId: "seu-projeto",
+      storageBucket: "seu-projeto.appspot.com",
+      messagingSenderId: "123456789",
+      appId: "1:123456789:web:abcdef"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+    const storage = getStorage(app);
+
+    let relatorioId = null;
+    let userId = null;
+
+    const params = new URLSearchParams(window.location.search);
+    relatorioId = params.get("id");
+
+    if (!relatorioId) {
+      alert("ID do relatório não encontrado.");
+      window.location.href = "home3.html";
+    }
+
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        window.location.href = "home0.html";
+        return;
+      }
+      userId = user.uid;
+      carregarRelatorio();
+      listarDespesas();
+    });
+
+    async function carregarRelatorio() {
+      const docRef = doc(db, "relatorios", relatorioId);
+      const snap = await getDoc(docRef);
+      if (!snap.exists()) {
+        alert("Relatório não encontrado.");
+        return;
+      }
+      const data = snap.data();
+      document.getElementById("relatorioInfo").innerHTML = `<strong>${data.titulo}</strong> - Status: ${data.status}`;
+    }
+
+    async function adicionarDespesa() {
+      const tipo = document.getElementById("tipo").value;
+      const valor = parseFloat(document.getElementById("valor").value);
+      const data = new Date(document.getElementById("data").value);
+      const formaPagamento = document.getElementById("formaPagamento").value;
+      const local = document.getElementById("local").value;
+      const file = document.getElementById("comprovante").files[0];
+
+      let comprovanteUrl = "";
+      if (file) {
+        const storageRef = ref(storage, `comprovantes/${relatorioId}-${Date.now()}.jpg`);
+        await uploadBytes(storageRef, file);
+        comprovanteUrl = await getDownloadURL(storageRef);
+      }
+
+      await addDoc(collection(db, "despesas"), {
+        relatorioId,
+        tipo,
+        valor,
+        data,
+        formaPagamento,
+        local,
+        comprovanteUrl
+      });
+
+      alert("Despesa salva!");
+      listarDespesas();
+    }
+
+    async function listarDespesas() {
+      const lista = document.getElementById("listaDespesas");
+      const totalSpan = document.getElementById("totalDespesas");
+      lista.innerHTML = "";
+      let total = 0;
+
+      const q = query(collection(db, "despesas"), where("relatorioId", "==", relatorioId));
+      const snapshot = await getDocs(q);
+
+      snapshot.forEach(docSnap => {
+        const d = docSnap.data();
+        total += d.valor;
+        const li = document.createElement("li");
+        li.style.marginBottom = "10px";
+        li.innerHTML = `
+          <strong>${d.tipo}</strong> - R$ ${d.valor.toFixed(2)} - ${d.local}<br/>
+          ${d.comprovanteUrl ? `<a href="${d.comprovanteUrl}" target="_blank">Comprovante</a>` : "Sem comprovante"}
+        `;
+        lista.appendChild(li);
+      });
+
+      totalSpan.textContent = total.toFixed(2);
+    }
+  </script>
+</body>
+</html>

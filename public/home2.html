@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Solicitação de Reembolso</title>
+</head>
+<body style="margin:0;padding:0;font-family:'Segoe UI',sans-serif;background-color:#f4f6fa;">
+
+  <div style="position:relative;background:linear-gradient(135deg,#0d3263,#185a9d);color:#fff;text-align:center;padding:30px 20px;display:flex;align-items:center;justify-content:center;">
+    <button onclick="window.location.href='home1.html'" style="position:absolute;left:20px;top:50%;transform:translateY(-50%);background:transparent;border:none;color:#fff;font-size:1rem;cursor:pointer;display:flex;align-items:center;gap:5px;">&#8592; Voltar</button>
+    <div>
+      <img id="userPhoto" alt="Foto do usuário" style="width:100px;height:100px;border-radius:50%;border:3px solid #fff;margin-bottom:10px;object-fit:cover;" />
+      <div id="userName" style="font-weight:bold;font-size:16px;">Seja bem-vindo</div>
+      <div style="font-size:14px;margin-top:5px;">Solicitação de Reembolso</div>
+      <div style="font-size:12px;margin-top:3px;">Central de Solicitação de Reembolso</div>
+    </div>
+  </div>
+
+  <div id="statusGrid" style="display:flex;flex-wrap:wrap;justify-content:center;gap:15px;padding:20px;max-width:1200px;margin:20px auto;"></div>
+
+  <div style="display:flex;justify-content:center;flex-wrap:wrap;gap:20px;padding:20px;max-width:800px;margin:0 auto 40px;">
+    <div onclick="window.location.href='home3.html'" style="background:#fff;border:2px solid #0d3263;color:#0d3263;border-radius:8px;padding:12px 24px;font-size:14px;font-weight:600;text-align:center;cursor:pointer;transition:transform 0.2s,box-shadow 0.2s;">
+      Nova Solicitação
+    </div>
+    <div style="background:#fff;border:2px solid #0d3263;color:#0d3263;border-radius:8px;padding:12px 24px;font-size:14px;font-weight:600;text-align:center;cursor:pointer;">
+      Ver Minhas Solicitações
+    </div>
+    <div style="background:#fff;border:2px solid #d32f2f;color:#d32f2f;border-radius:8px;padding:12px 24px;font-size:14px;font-weight:600;text-align:center;cursor:pointer;">
+      Aprovações Pendentes
+    </div>
+  </div>
+
+  <div style="font-size:12px;color:#999;text-align:center;padding:15px 0;">
+    Desenvolvido por @Fábio Freitas | Tribunal de Justiça do Estado do Pará
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+    import { getFirestore, collection, query, where, getDocs, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "SUA_API_KEY",
+      authDomain: "seu-projeto.firebaseapp.com",
+      projectId: "seu-projeto",
+      storageBucket: "seu-projeto.appspot.com",
+      messagingSenderId: "123456789",
+      appId: "1:123456789:web:abcdef"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    const userName = document.getElementById("userName");
+    const userPhoto = document.getElementById("userPhoto");
+    const statusGrid = document.getElementById("statusGrid");
+
+    const statusList = [
+      { label: "Em Elaboração", icon: "document--v1.png", key: "rascunho" },
+      { label: "Aguardando Atesto", icon: "hourglass-sand-top.png", key: "aguardando_atesto" },
+      { label: "Atesto Realizado", icon: "checked-checkbox.png", key: "atestando" },
+      { label: "Enviado Seplan", icon: "opened-folder.png", key: "seplan" },
+      { label: "Em Análise", icon: "inspection.png", key: "analise" },
+      { label: "Reembolsada", icon: "money.png", key: "reembolsada" },
+    ];
+
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        window.location.href = "home0.html";
+        return;
+      }
+
+      const docSnap = await getDoc(doc(db, "usuarios", user.uid));
+      if (docSnap.exists()) {
+        const dados = docSnap.data();
+        userName.textContent = `Seja bem-vindo, ${dados.nome}`;
+        if (dados.fotoUrl) userPhoto.src = dados.fotoUrl;
+      }
+
+      for (let s of statusList) {
+        const q = query(collection(db, "relatorios"), where("criadoPor", "==", user.uid), where("status", "==", s.key));
+        const snapshot = await getDocs(q);
+        const count = snapshot.size;
+
+        const card = document.createElement("div");
+        card.style = "flex:1 1 calc(33.33% - 30px);min-width:250px;background:#fff;border-radius:10px;padding:20px;text-align:center;box-shadow:0 2px 6px rgba(0,0,0,0.1);";
+        card.innerHTML = `
+          <img src="https://img.icons8.com/color/48/${s.icon}" style="width:32px;height:32px;margin-bottom:10px;" />
+          <div style="font-size:14px;font-weight:bold;color:#0d3263;">${s.label}</div>
+          <div style="font-size:18px;font-weight:bold;color:#0d3263;margin-top:5px;">${count}</div>
+        `;
+        statusGrid.appendChild(card);
+      }
+    });
+  </script>
+</body>
+</html>

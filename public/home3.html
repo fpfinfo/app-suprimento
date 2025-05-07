@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Meus Relatórios (Firebase)</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+
+  <style>
+    body {
+      font-family:'Segoe UI',sans-serif;
+      background:#f4f6fa;
+      margin:0;
+      padding:1rem;
+    }
+    h2 { margin-bottom: 1rem; }
+    ul { list-style: none; padding: 0; }
+    li {
+      background: #fff;
+      border: 1px solid #ddd;
+      padding: 1rem;
+      margin-bottom: .75rem;
+      border-radius: 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .info {
+      flex: 1;
+    }
+    .actions button {
+      margin-left: .5rem;
+      padding: .4rem .75rem;
+      background: #0d3263;
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: .875rem;
+    }
+    .actions button:hover {
+      background: #185a9d;
+    }
+  </style>
+</head>
+<body>
+  <h2>Meus Relatórios</h2>
+  <ul id="relatoriosLista"></ul>
+
+  <!-- Firebase SDK -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+    import { getFirestore, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "SUA_API_KEY",
+      authDomain: "seu-projeto.firebaseapp.com",
+      projectId: "seu-projeto",
+      storageBucket: "seu-projeto.appspot.com",
+      messagingSenderId: "123456789",
+      appId: "1:123456789:web:abcdef"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    const lista = document.getElementById('relatoriosLista');
+
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        window.location.href = "home0.html";
+        return;
+      }
+
+      const q = query(collection(db, "relatorios"), where("criadoPor", "==", user.uid));
+      const snapshot = await getDocs(q);
+
+      snapshot.forEach(doc => {
+        const dados = doc.data();
+        const li = document.createElement("li");
+        li.innerHTML = `
+          <div class="info">
+            <strong>${dados.titulo}</strong><br/>
+            Status: <em>${dados.status}</em> <br/>
+            Criado em: ${dados.dataCriacao.toDate().toLocaleDateString("pt-BR")}
+          </div>
+          <div class="actions">
+            <button onclick="window.location.href='home4.html?id=${doc.id}'">
+              Abrir
+            </button>
+          </div>
+        `;
+        lista.appendChild(li);
+      });
+    });
+  </script>
+</body>
+</html>

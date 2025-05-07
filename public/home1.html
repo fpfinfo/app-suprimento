@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Home - Suprimento de Fundos</title>
+</head>
+<body style="font-family: 'Segoe UI', sans-serif; background-color: #f4f6fa; padding: 20px;">
+
+  <h2>Bem-vindo ao sistema</h2>
+  <div id="userInfo" style="margin-top: 20px;">
+    <img id="userPhoto" src="" alt="Foto" style="width:100px;height:100px;border-radius:50%;border:2px solid #0078d4;display:none;" />
+    <p id="userName" style="font-size:18px;font-weight:bold;"></p>
+    <button onclick="logout()">Sair</button>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+    import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "SUA_API_KEY",
+      authDomain: "seu-projeto.firebaseapp.com",
+      projectId: "seu-projeto",
+      storageBucket: "seu-projeto.appspot.com",
+      messagingSenderId: "123456789",
+      appId: "1:123456789:web:abcdef"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        const uid = user.uid;
+        const docRef = doc(db, "usuarios", uid);
+        const docSnap = await getDoc(docRef);
+
+        if (docSnap.exists()) {
+          const dados = docSnap.data();
+          document.getElementById("userName").textContent = dados.nome;
+          if (dados.fotoUrl) {
+            const img = document.getElementById("userPhoto");
+            img.src = dados.fotoUrl;
+            img.style.display = "block";
+          }
+        } else {
+          alert("Usuário não encontrado no banco de dados.");
+        }
+      } else {
+        window.location.href = "home0.html";
+      }
+    });
+
+    function logout() {
+      signOut(auth).then(() => {
+        window.location.href = "home0.html";
+      });
+    }
+  </script>
+</body>
+</html>
